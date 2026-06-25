@@ -14,6 +14,8 @@ again. One Go binary, a plain text file, no embeddings.
   non-zero, no manual step.
 - Records git reverts for you, via a post-commit hook.
 - Surfaces the lessons that keep mattering — each recall makes one a little louder.
+- Lets unused lessons fade, and `recoil decay` clears out the ones that stopped
+  mattering — recall keeps the useful ones alive.
 - Keeps everything in one plain-text file you can read and edit by hand.
 
 ## Build
@@ -60,12 +62,26 @@ Install a git hook to record reverts:
 recoil hook --install
 ```
 
+## Forgetting
+
+A lesson's strength fades the longer it goes unused — it halves every 30 unused
+days by default. Recalling a lesson resets that clock and bumps its count, so the
+ones you keep hitting stay strong while the rest fade. Surprise weight and re-fire
+count both raise strength, so a hard-won correction outlives a routine note. Clear
+out the faded ones:
+
+```sh
+recoil decay --dry-run    # show what would go
+recoil decay              # forget it
+```
+
 ## Commands
 
 ```
 recoil init                       create the store
 recoil encode --gist .. --cue ..  record a lesson
 recoil recall [--situation ..]    show matching lessons (also reads stdin)
+recoil decay [--dry-run]          forget lessons that have faded
 recoil watch -- <cmd>             run a command, record it if it fails
 recoil hook [--install]           git post-commit hook for reverts
 recoil list                       show everything stored

@@ -4,7 +4,8 @@
 // command, a revert, a correction — as a cue (the situation it happened in) plus
 // a gist (the lesson), and surfaces those gists when the current situation looks
 // the same. Matching is deterministic keyword cue-overlap: no embeddings, no
-// model, no network. One static binary, one plain-text store.
+// model, no network. Memories fade when they stop being useful. One static
+// binary, one plain-text store.
 package main
 
 import (
@@ -23,7 +24,7 @@ import (
 	"time"
 )
 
-const version = "0.2.0"
+const version = "0.3.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -37,6 +38,8 @@ func main() {
 		cmdEncode(os.Args[2:])
 	case "recall":
 		cmdRecall(os.Args[2:])
+	case "decay":
+		cmdDecay(os.Args[2:])
 	case "watch":
 		cmdWatch(os.Args[2:])
 	case "hook":
@@ -58,6 +61,7 @@ usage:
   recoil init
   recoil encode --gist "<lesson>" --cue "<tokens>" [--trigger T] [--weight N]
   recoil recall [--situation "<text>"] [--files a,b] [--top N]   (also reads stdin)
+  recoil decay [--floor F] [--half-life D] [--dry-run]    forget faded memories
   recoil watch -- <command> [args...]    run a command; remember it if it fails
   recoil hook [--install]                git post-commit hook that records reverts
   recoil list
@@ -82,7 +86,7 @@ func storePath() string { return filepath.Join(storeDir(), "store.tsv") }
 // --- record model ---
 
 // record is one remembered flinch: a cue (the situation that triggered it) plus
-// a gist (the lesson), with salience bookkeeping for ranking and re-fire.
+// a gist (the lesson), with salience bookkeeping for ranking and decay.
 type record struct {
 	ID      string
 	Created int64
@@ -246,7 +250,35 @@ func sortedTokens(set map[string]bool) []string {
 	return out
 }
 
-// --- scoring (pure: no I/O, so it is unit-testable on its own) ---
+// --- strength, scoring, decay (pure: no I/O, so they are unit-testable) ---
+
+const (
+	defaultHalfLifeDays = 30.0 // a memory loses half its strength every 30 unused days
+	defaultFloor        = 0.1  // decay forgets memories whose strength falls below this
+)
+
+func halfLifeDays() float64 {
+	if v := os.Getenv("RECOIL_HALFLIFE_DAYS"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
+			return f
+		}
+	}
+	return defaultHalfLifeDays
+}
+
+// strength is a record's current salience after time-decay: its base salience
+// (surprise weight, reinforced by re-fire count) times an exponential decay over
+// the days since it was last recalled. Recalling a memory resets that clock and
+// raises its hit count, so memories that keep proving useful stay strong while
+// untouched ones fade. With halfLife=30, strength halves every 30 unused days.
+func strength(r record, now int64, halfLife float64) float64 {
+	base := r.Weight * (1 + math.Log(1+float64(r.Hits)))
+	ageDays := float64(now-r.Last) / 86400.0
+	if ageDays < 0 {
+		ageDays = 0
+	}
+	return base * math.Pow(0.5, ageDays/halfLife)
+}
 
 type scored struct {
 	idx     int
@@ -255,9 +287,10 @@ type scored struct {
 }
 
 // scoreRecords ranks records by cue overlap with the current situation, weighted
-// by encoded surprise and re-fire count. A stored cue is already normalized
-// tokens, so it is split with strings.Fields rather than re-tokenized.
-func scoreRecords(recs []record, situation map[string]bool) []scored {
+// by current strength — so a faded memory ranks below a fresh one even on an
+// equal match. A stored cue is already normalized tokens, so it is split with
+// strings.Fields rather than re-tokenized.
+func scoreRecords(recs []record, situation map[string]bool, now int64, halfLife float64) []scored {
 	var out []scored
 	for i, r := range recs {
 		var matched []string
@@ -270,11 +303,23 @@ func scoreRecords(recs []record, situation map[string]bool) []scored {
 			continue
 		}
 		sort.Strings(matched)
-		salience := r.Weight * (1 + math.Log(1+float64(r.Hits)))
-		out = append(out, scored{i, float64(len(matched)) * salience, matched})
+		out = append(out, scored{i, float64(len(matched)) * strength(r, now, halfLife), matched})
 	}
 	sort.SliceStable(out, func(a, b int) bool { return out[a].score > out[b].score })
 	return out
+}
+
+// partitionDecay splits records into those still above the strength floor and
+// those that have faded below it.
+func partitionDecay(recs []record, now int64, floor, halfLife float64) (keep, forget []record) {
+	for _, r := range recs {
+		if strength(r, now, halfLife) < floor {
+			forget = append(forget, r)
+		} else {
+			keep = append(keep, r)
+		}
+	}
+	return keep, forget
 }
 
 // --- commands ---
@@ -366,7 +411,7 @@ func cmdRecall(args []string) {
 	if err != nil {
 		die(err)
 	}
-	fired := scoreRecords(recs, situation)
+	fired := scoreRecords(recs, situation, time.Now().Unix(), halfLifeDays())
 	if len(fired) == 0 {
 		fmt.Fprintln(os.Stderr, "recoil: nothing fired (no cue overlap)")
 		return
@@ -387,7 +432,8 @@ func cmdRecall(args []string) {
 
 // reinforce bumps the hit count and last-seen time of the fired records and
 // saves. Kept separate from presentation so the ranking is testable without a
-// disk write as a side effect.
+// disk write as a side effect. Resetting Last is what keeps a recalled memory
+// from fading — using a memory renews it.
 func reinforce(recs []record, fired []scored) {
 	now := time.Now().Unix()
 	for _, f := range fired {
@@ -397,6 +443,36 @@ func reinforce(recs []record, fired []scored) {
 	if err := saveRecords(recs); err != nil {
 		fmt.Fprintln(os.Stderr, "recoil:", err)
 	}
+}
+
+// cmdDecay forgets memories whose strength has faded below the floor. Surprise
+// weight and re-fire count both raise strength, so a hard-won correction outlives
+// a routine note; recalling a memory renews it. --dry-run shows without removing.
+func cmdDecay(args []string) {
+	fs := flag.NewFlagSet("decay", flag.ExitOnError)
+	floor := fs.Float64("floor", defaultFloor, "forget memories whose strength has fallen below this")
+	halfLife := fs.Float64("half-life", halfLifeDays(), "days for an unused memory's strength to halve")
+	dry := fs.Bool("dry-run", false, "show what would be forgotten without removing it")
+	fs.Parse(args)
+
+	recs, err := loadRecords()
+	if err != nil {
+		die(err)
+	}
+	keep, forget := partitionDecay(recs, time.Now().Unix(), *floor, *halfLife)
+	verb := "forgot"
+	if *dry {
+		verb = "would forget"
+	}
+	for _, r := range forget {
+		fmt.Printf("%s: [%s w=%g hits=%d] %s\n", verb, r.Trigger, r.Weight, r.Hits, r.Gist)
+	}
+	if !*dry && len(forget) > 0 {
+		if err := saveRecords(keep); err != nil {
+			die(err)
+		}
+	}
+	fmt.Fprintf(os.Stderr, "recoil: %d forgotten, %d kept\n", len(forget), len(keep))
 }
 
 // cmdWatch runs a command and, if it fails, records the failure as a flinch: the
@@ -529,8 +605,11 @@ func cmdList(args []string) {
 		fmt.Println("recoil: empty")
 		return
 	}
+	now := time.Now().Unix()
+	hl := halfLifeDays()
 	for _, r := range recs {
-		fmt.Printf("[%s w=%g hits=%d] %s\n   cue: %s\n", r.Trigger, r.Weight, r.Hits, r.Gist, r.Cue)
+		fmt.Printf("[%s w=%g hits=%d str=%.2f] %s\n   cue: %s\n",
+			r.Trigger, r.Weight, r.Hits, strength(r, now, hl), r.Gist, r.Cue)
 	}
 }
 
