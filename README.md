@@ -1,24 +1,24 @@
 # recoil
 
 Memory for AI coding agents. It remembers the things that go wrong — a failed
-command, a revert, a correction — and reminds you when you're about to hit them
+command, a revert, a correction — and reminds your AI agent when it about to hit them
 again. One Go binary, a plain text file, no embeddings.
 
 ## What it does
 
 - Remembers a lesson tied to the situation it happened in — the files, the error
   text, the keywords around it.
-- Brings that lesson back when you're in a similar situation again, matched by
+- Brings that lesson back when your AI agent in a similar situation again, matched by
   plain keyword overlap (an unrelated task gets nothing).
-- Records failures for you: `recoil watch -- <cmd>` remembers anything that exits
+- Records failures for you/AI agent: `recoil watch -- <cmd>` remembers anything that exits
   non-zero, no manual step.
-- Records git reverts for you, via a post-commit hook.
-- Warns you before you repeat a known-bad change — a git pre-commit hook that
+- Records git reverts for your AI agent, via a post-commit hook.
+- Warns you/AI agent before you repeat a known-bad change — a git pre-commit hook that
   flags when you're touching something that bit you before.
 - Surfaces the lessons that keep mattering — each recall makes one a little louder.
 - Lets unused lessons fade, and `recoil decay` clears out the ones that stopped
   mattering — recall keeps the useful ones alive.
-- Keeps everything in one plain-text file you can read and edit by hand.
+- Keeps everything in one plain-text file you/AI agent can read and edit by hand.
 
 ## Build
 
