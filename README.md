@@ -11,8 +11,6 @@ them again. One Go binary, a plain text file, no embeddings.
 
 ![recoil: encode a lesson, recall it, then guard a known-bad change](assets/demo.gif)
 
-<!-- regenerate the demo gifs with ./demo/record.sh -->
-
 ## What it does
 
 - Remembers a lesson tied to the situation it happened in — the files, the error
