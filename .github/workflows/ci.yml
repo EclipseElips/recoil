@@ -1,0 +1,53 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Manifests parse and have required fields
+        run: |
+          set -e
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json hooks/hooks.json; do
+            echo "parsing $f"
+            jq empty "$f"
+          done
+          jq -e '.name == "recoil" and (.version | type == "string")' .claude-plugin/plugin.json > /dev/null
+          jq -e '.name and .owner.name and (.plugins | length >= 1) and (.plugins[0].source == "./")' .claude-plugin/marketplace.json > /dev/null
+          jq -e '.name == "recoil" and (.skills == "./skills/")' .codex-plugin/plugin.json > /dev/null
+          pv=$(jq -r '.version' .claude-plugin/plugin.json)
+          mv=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          cv=$(jq -r '.version' .codex-plugin/plugin.json)
+          if [ "$pv" != "$mv" ] || [ "$pv" != "$cv" ]; then
+            echo "version mismatch: plugin=$pv marketplace=$mv codex=$cv"; exit 1
+          fi
+
+      - name: Bundled skill and hook script exist
+        run: |
+          set -e
+          test -f skills/recoil/SKILL.md
+          grep -q '^name:' skills/recoil/SKILL.md
+          grep -q '^description:' skills/recoil/SKILL.md
+          test -f scripts/guard.sh
+
+      - name: Official Claude plugin validator (best-effort)
+        continue-on-error: true
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude plugin validate . --strict
