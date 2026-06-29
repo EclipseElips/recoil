@@ -1,0 +1,20 @@
+{
+  "name": "recoil",
+  "version": "1.0.0",
+  "description": "Operational memory for coding agents: recall past mistakes before you act, encode the lesson when something goes wrong.",
+  "author": { "name": "EclipseElips", "url": "https://github.com/EclipseElips" },
+  "homepage": "https://github.com/EclipseElips/recoil",
+  "repository": "https://github.com/EclipseElips/recoil",
+  "license": "MIT",
+  "keywords": ["memory", "operational-memory", "dev-workflow", "coding-agent"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Recoil",
+    "shortDescription": "Operational memory for coding agents",
+    "longDescription": "Recoil remembers what went wrong in your dev loop — a failed command, a revert, a correction — and surfaces it before you hit it again. A local CLI backed by a plain-text store; no embeddings, no network. The skill teaches the agent to recall and guard before it acts, and to encode a lesson whenever the loop is surprised.",
+    "developerName": "EclipseElips",
+    "category": "Developer Tools",
+    "capabilities": ["Write"],
+    "defaultPrompt": ["Recall any past mistakes for the files I'm about to change"]
+  }
+}
