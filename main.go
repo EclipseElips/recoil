@@ -27,7 +27,7 @@ import (
 
 // version is the recoil release. Release builds stamp the git tag over it via
 // -ldflags "-X main.version=..."; plain `go build`/`go install` keep this value.
-var version = "1.0.0"
+var version = "1.0.1"
 
 func main() {
 	if len(os.Args) < 2 {

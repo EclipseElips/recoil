@@ -6,7 +6,7 @@
     {
       "name": "recoil",
       "source": "./",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Operational memory for coding agents: recall past mistakes before you act, encode the lesson when something goes wrong.",
       "author": { "name": "EclipseElips" },
       "homepage": "https://github.com/EclipseElips/recoil",
