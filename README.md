@@ -9,11 +9,9 @@ Memory for AI coding agents. It remembers the things that go wrong — a failed
 command, a revert, a correction — and reminds your agent when it's about to hit
 them again. One Go binary, a plain text file, no embeddings.
 
-<!--
-Demo: record it with `vhs demo/recoil.tape` (writes assets/demo.gif), then
-commit the gif and uncomment the next line.
-![recoil recall and guard, in the terminal](assets/demo.gif)
--->
+![recoil: encode a lesson, recall it, then guard a known-bad change](assets/demo.gif)
+
+<!-- regenerate the demo gifs with ./demo/record.sh -->
 
 ## What it does
 
@@ -65,6 +63,8 @@ recoil init
 
 recoil ships as a skill, so the agent knows when to reach for it: recall and
 guard before it touches your files, encode a lesson when something goes wrong.
+
+![the loop an agent runs: guard before it edits, encode on a correction, recall on the next related task](assets/demo-agent.gif)
 
 **Claude Code** — recoil is submitted to Anthropic's community plugin directory.
 Once it's listed there:
@@ -162,6 +162,8 @@ out the faded ones:
 recoil decay --dry-run    # show what would go
 recoil decay              # forget it
 ```
+
+![unused lessons fade; `recoil decay` forgets the ones that drop below the floor](assets/demo-decay.gif)
 
 ## Commands
 

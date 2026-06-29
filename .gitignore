@@ -25,3 +25,6 @@ desktop.ini
 
 # local maintainer notes — kept out of the published repo
 /PUBLISHING.md
+
+# demo tooling fetched by demo/record.sh
+demo/.tools/
