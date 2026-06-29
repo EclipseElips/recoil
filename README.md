@@ -39,6 +39,34 @@ curl -sSfL https://raw.githubusercontent.com/EclipseElips/recoil/main/install.sh
 Or download an archive for your platform from the
 [releases page](https://github.com/EclipseElips/recoil/releases).
 
+recoil is a **command-line tool** — you run it from a terminal. After you unpack
+a prebuilt archive, put the binary somewhere on your `PATH` and run it from a
+shell:
+
+**Windows.** 
+
+```powershell
+.\recoil.exe init
+.\recoil.exe version
+```
+
+Move `recoil.exe` into a folder on your `PATH` to run `recoil` from anywhere.
+
+**macOS.**
+
+```sh
+xattr -d com.apple.quarantine ./recoil
+chmod +x ./recoil
+./recoil version
+```
+
+**Linux.**
+
+```sh
+chmod +x ./recoil
+./recoil version
+```
+
 With a Go toolchain:
 
 ```sh

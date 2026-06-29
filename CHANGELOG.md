@@ -6,6 +6,12 @@ adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-29
+
+### Changed
+- README now shows how to run a prebuilt download per platform (Windows PATH,
+  macOS quarantine clear, Linux `chmod +x`).
+
 ## [1.0.1] - 2026-06-29
 
 ### Changed
@@ -30,6 +36,7 @@ First release.
 - Packaged as a Claude Code plugin and a Codex plugin, with a bundled skill and a
   warn-only pre-edit guard hook. `AGENTS.md` fallback for other agents.
 
-[Unreleased]: https://github.com/EclipseElips/recoil/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/EclipseElips/recoil/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/EclipseElips/recoil/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/EclipseElips/recoil/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/EclipseElips/recoil/releases/tag/v1.0.0
