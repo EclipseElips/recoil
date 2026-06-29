@@ -1,0 +1,2 @@
+# Shell scripts must stay LF so the plugin's hook runs on macOS/Linux.
+*.sh text eol=lf
